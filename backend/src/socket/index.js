@@ -170,7 +170,7 @@ export const setupSocketHandlers = (io, app) => {
           file_url: egressId || 's3-not-configured.mp4'
         });
 
-        io.to(sessionId).emit('recording:status', { status: 'recording' });
+        io.to(sessionId).emit('recording:status', { status: 'recording', sessionId });
       } catch (err) {
         console.error('recording:start error:', err);
         socket.emit('error', 'Failed to start recording');
@@ -201,7 +201,7 @@ export const setupSocketHandlers = (io, app) => {
           status: 'ready'
         }).eq('session_id', sessionId).is('ended_at', null);
 
-        io.to(sessionId).emit('recording:status', { status: 'stopped' });
+        io.to(sessionId).emit('recording:status', { status: 'stopped', sessionId });
       } catch (err) {
         console.error('recording:stop error:', err);
         socket.emit('error', 'Failed to stop recording');

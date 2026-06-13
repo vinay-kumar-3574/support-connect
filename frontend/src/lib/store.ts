@@ -65,6 +65,7 @@ interface StoreState {
   // Socket Handlers
   receiveMessage: (payload: any) => void;
   markSessionEnded: (sessionId: string) => void;
+  updateRecordingStatus: (sessionId: string, status: string) => void;
   
   // Chat
   sendMessage: (sessionId: string, sender: string, role: Role, text: string) => void;
@@ -208,6 +209,18 @@ export const useStore = create<StoreState>()(
         set((s) => ({
           sessions: s.sessions.map((sess) =>
             sess.id === sessionId ? { ...sess, status: 'ended', endedAt: Date.now() } : sess
+          ),
+        }));
+      },
+
+      updateRecordingStatus: (sessionId, status) => {
+        set((s) => ({
+          sessions: s.sessions.map((sess) =>
+            sess.id === sessionId ? { 
+              ...sess, 
+              recording: status === 'recording' || status === 'processing' || status === 'stopped', 
+              recordingReady: status === 'ready' 
+            } : sess
           ),
         }));
       },

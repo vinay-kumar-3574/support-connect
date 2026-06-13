@@ -48,6 +48,12 @@ export const socketService = {
       useStore.getState().markSessionEnded(session_id);
     });
 
+    socket.on('recording:status', (payload) => {
+      if (payload.sessionId && payload.status) {
+        useStore.getState().updateRecordingStatus(payload.sessionId, payload.status);
+      }
+    });
+
     return socket;
   },
 

@@ -49,6 +49,7 @@ function Room() {
   const [livekitHost, setLivekitHost] = useState("");
   const [error, setError] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
 
   useEffect(() => {
     socketService.socket?.on('recording:status', (payload) => {
@@ -58,6 +59,22 @@ function Room() {
       socketService.socket?.off('recording:status');
     };
   }, []);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isRecording) {
+      interval = setInterval(() => setRecordingTime(t => t + 1), 1000);
+    } else {
+      setRecordingTime(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording]);
+
+  const formatTimer = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   // 1. Fetch LiveKit Token & Connect Socket
   useEffect(() => {
@@ -181,7 +198,7 @@ function Room() {
                   }
                 }}
               >
-                {isRecording ? "Stop Recording" : "Record"}
+                {isRecording ? `Stop Recording (${formatTimer(recordingTime)})` : "Record"}
               </Button>
             </div>
           )}

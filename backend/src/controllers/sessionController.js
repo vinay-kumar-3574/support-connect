@@ -197,8 +197,10 @@ export const endSession = async (req, res) => {
     try {
       await roomService.deleteRoom(session.livekit_room_name);
     } catch (lkErr) {
-      console.error('Error deleting LiveKit room:', lkErr);
-      // Proceed anyway
+      // Ignore 404 errors (room doesn't exist or already deleted)
+      if (lkErr?.status !== 404) {
+        console.error('Error deleting LiveKit room:', lkErr);
+      }
     }
 
     // Socket.io emit is handled by the socket layer or can be imported, 

@@ -52,7 +52,7 @@ function SessionDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar variant={isAgent ? "agent" : "default"} />
+      <Navbar variant={isAgent ? "agent" : "public"} />
       <main className="container mx-auto px-6 py-10 max-w-5xl">
         <Link to={isAgent ? "/dashboard" : "/"} className="text-sm text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> {isAgent ? "Back to dashboard" : "Back to home"}
