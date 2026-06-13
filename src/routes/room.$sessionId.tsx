@@ -199,7 +199,7 @@ function Room() {
       </div>
 
       {/* Control bar */}
-      <div className="h-20 border-t border-border/60 bg-card/80 backdrop-blur flex items-center justify-center gap-2">
+      <div className="h-20 border-t border-border/60 bg-card backdrop-blur flex items-center justify-center gap-2">
         <ControlButton active={micOn} onClick={() => setMicOn(!micOn)} icon={micOn ? Mic : MicOff} danger={!micOn} />
         <ControlButton active={camOn} onClick={() => setCamOn(!camOn)} icon={camOn ? Camera : CameraOff} danger={!camOn} />
         {role === "agent" && (
