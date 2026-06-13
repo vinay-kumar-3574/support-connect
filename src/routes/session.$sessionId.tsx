@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { ArrowLeft, Download, Circle, Clock, Users } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { AgentGuard } from "@/components/AgentGuard";
@@ -20,8 +21,16 @@ export const Route = createFileRoute("/session/$sessionId")({
 function SessionDetail() {
   const { sessionId } = useParams({ from: "/session/$sessionId" });
   const session = useStore((s) => s.sessions.find((x) => x.id === sessionId));
-  const messages = useStore((s) => s.messages.filter((m) => m.sessionId === sessionId));
-  const events = useStore((s) => s.events.filter((e) => e.sessionId === sessionId));
+  const allMessages = useStore((s) => s.messages);
+  const allEvents = useStore((s) => s.events);
+  const messages = useMemo(
+    () => allMessages.filter((m) => m.sessionId === sessionId),
+    [allMessages, sessionId],
+  );
+  const events = useMemo(
+    () => allEvents.filter((e) => e.sessionId === sessionId),
+    [allEvents, sessionId],
+  );
 
   if (!session) {
     return (
