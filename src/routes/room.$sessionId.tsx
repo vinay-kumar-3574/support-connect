@@ -122,9 +122,9 @@ function Room() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-[oklch(0.12_0.02_240)] text-foreground overflow-hidden">
+    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
       {/* Header */}
-      <header className="h-14 px-6 flex items-center justify-between border-b border-border/60 bg-card/50 backdrop-blur">
+      <header className="h-14 px-6 flex items-center justify-between border-b border-border/60 bg-card backdrop-blur">
         <div className="flex items-center gap-3">
           <span className="font-mono text-xs text-muted-foreground">#{activeSession.id}</span>
           {activeSession.recording && (
