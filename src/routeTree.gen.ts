@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SessionEndedRouteImport } from './routes/session-ended'
-import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -22,11 +21,6 @@ import { Route as JoinTokenRouteImport } from './routes/join.$token'
 const SessionEndedRoute = SessionEndedRouteImport.update({
   id: '/session-ended',
   path: '/session-ended',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -70,7 +64,6 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
   '/session-ended': typeof SessionEndedRoute
   '/join/$token': typeof JoinTokenRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
@@ -81,7 +74,6 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
   '/session-ended': typeof SessionEndedRoute
   '/join/$token': typeof JoinTokenRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
@@ -93,7 +85,6 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
   '/session-ended': typeof SessionEndedRoute
   '/join/$token': typeof JoinTokenRoute
   '/room/$sessionId': typeof RoomSessionIdRoute
@@ -106,7 +97,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
-    | '/register'
     | '/session-ended'
     | '/join/$token'
     | '/room/$sessionId'
@@ -117,7 +107,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
-    | '/register'
     | '/session-ended'
     | '/join/$token'
     | '/room/$sessionId'
@@ -128,7 +117,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
-    | '/register'
     | '/session-ended'
     | '/join/$token'
     | '/room/$sessionId'
@@ -140,7 +128,6 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
-  RegisterRoute: typeof RegisterRoute
   SessionEndedRoute: typeof SessionEndedRoute
   JoinTokenRoute: typeof JoinTokenRoute
   RoomSessionIdRoute: typeof RoomSessionIdRoute
@@ -154,13 +141,6 @@ declare module '@tanstack/react-router' {
       path: '/session-ended'
       fullPath: '/session-ended'
       preLoaderRoute: typeof SessionEndedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -220,7 +200,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
-  RegisterRoute: RegisterRoute,
   SessionEndedRoute: SessionEndedRoute,
   JoinTokenRoute: JoinTokenRoute,
   RoomSessionIdRoute: RoomSessionIdRoute,

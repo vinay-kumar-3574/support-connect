@@ -34,14 +34,16 @@ export function Navbar({ variant = "public" }: { variant?: "public" | "agent" })
                 </Button>
               )}
             </Link>
-            <Link to="/admin">
-              {({ isActive }) => (
-                <Button variant={isActive ? "secondary" : "ghost"} size="sm">
-                  <Shield className="h-4 w-4" />
-                  Admin
-                </Button>
-              )}
-            </Link>
+            {agent.isAdmin && (
+              <Link to="/admin">
+                {({ isActive }) => (
+                  <Button variant={isActive ? "secondary" : "ghost"} size="sm">
+                    <Shield className="h-4 w-4" />
+                    Admin
+                  </Button>
+                )}
+              </Link>
+            )}
             <div className="mx-3 h-6 w-px bg-border" />
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {agent.fullName}
@@ -57,11 +59,6 @@ export function Navbar({ variant = "public" }: { variant?: "public" | "agent" })
             <ThemeToggle />
             <Link to="/login">
               <Button variant="ghost" size="sm">Agent login</Button>
-            </Link>
-            <Link to="/register">
-              <Button size="sm" className="bg-gradient-brand text-primary-foreground shadow-glow hover:opacity-90">
-                Get started
-              </Button>
             </Link>
           </nav>
         )}

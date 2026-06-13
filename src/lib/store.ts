@@ -8,6 +8,7 @@ export interface Agent {
   fullName: string;
   email: string;
   password: string; // mock only
+  isAdmin?: boolean;
 }
 
 export interface ChatMessage {
@@ -87,6 +88,13 @@ export const useStore = create<StoreState>()(
           fullName: "Demo Agent",
           email: "demo@vidline.app",
           password: "demo1234",
+        },
+        {
+          id: "admin",
+          fullName: "Vidline Admin",
+          email: "admin@vidline.app",
+          password: "admin1234",
+          isAdmin: true,
         },
       ],
       auth: { token: null, agent: null },
@@ -226,7 +234,24 @@ export const useStore = create<StoreState>()(
       getSessionByToken: (token) =>
         get().sessions.find((s) => s.inviteToken === token),
     }),
-    { name: "vidline-store" },
+    {
+      name: "vidline-store",
+      version: 2,
+      migrate: (persisted: any) => {
+        if (persisted && Array.isArray(persisted.agents)) {
+          if (!persisted.agents.find((a: Agent) => a.email === "admin@vidline.app")) {
+            persisted.agents.push({
+              id: "admin",
+              fullName: "Vidline Admin",
+              email: "admin@vidline.app",
+              password: "admin1234",
+              isAdmin: true,
+            });
+          }
+        }
+        return persisted;
+      },
+    },
   ),
 );
 
