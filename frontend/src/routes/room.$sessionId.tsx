@@ -39,8 +39,8 @@ function Room() {
 
   const storedName = sessionStorage.getItem(`vidline-name-${sessionId}`);
   const storedRole = sessionStorage.getItem(`vidline-role-${sessionId}`) as Role | null;
-  const role: Role = storedRole ?? (agent ? "agent" : "customer");
-  const myName = storedName ?? agent?.fullName ?? "Guest";
+  const role: Role = storedRole || (agent ? "agent" : "customer");
+  const myName = storedName || agent?.fullName || (agent ? "Agent" : "Guest");
 
   const [chatOpen, setChatOpen] = useState(true);
   const [draft, setDraft] = useState("");
@@ -115,6 +115,14 @@ function Room() {
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
       {/* Body */}
       <div className="flex-1 flex overflow-hidden">
+        {/* Hide LiveKit's default Chat button so it doesn't confuse the user */}
+        <style>{`
+          .lk-button[aria-label="Chat"],
+          .lk-chat-toggle {
+            display: none !important;
+          }
+        `}</style>
+
         {/* LiveKit Video Area */}
         <div className="flex-1 relative bg-black">
           <LiveKitRoom
@@ -124,6 +132,7 @@ function Room() {
             serverUrl={livekitHost}
             connect={true}
             className="h-full w-full"
+            data-lk-theme="default"
             onDisconnected={() => {
               if (role === 'agent') {
                 navigate({ to: '/dashboard' });
@@ -132,17 +141,38 @@ function Room() {
               }
             }}
           >
-            {/* The VideoConference component provides the default layout, mic/cam controls, and active speaker logic */}
             <VideoConference />
             <RoomAudioRenderer />
           </LiveKitRoom>
 
-          {/* Toggle Custom Chat Button overlay (in case LiveKit controls hide it) */}
-          <div className="absolute top-4 right-4 z-50">
-            <Button variant="secondary" size="icon" className="rounded-full shadow-lg" onClick={() => setChatOpen(!chatOpen)}>
-              <MessageSquare className="h-5 w-5" />
-            </Button>
-          </div>
+          {/* Custom Controls Overlay for Agent */}
+          {role === 'agent' && (
+            <div className="absolute top-4 left-4 z-50">
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                className="shadow-lg font-medium"
+                onClick={async () => {
+                  await useStore.getState().endSession(sessionId);
+                  toast.success("Session ended for everyone");
+                  navigate({ to: '/dashboard' });
+                }}
+              >
+                End Session for All
+              </Button>
+            </div>
+          )}
+
+          {/* Toggle Custom Chat Button overlay */}
+          {/* We move it to right-20 to avoid colliding with LiveKit's Focus/Zoom button which sits at top-right of tiles */}
+          {!chatOpen && (
+            <div className="absolute top-4 right-20 z-50">
+              <Button variant="secondary" className="rounded-full shadow-lg gap-2 pr-4 pl-3" onClick={() => setChatOpen(true)}>
+                <MessageSquare className="h-4 w-4" />
+                <span>Open Chat</span>
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Custom Socket.io Chat sidebar */}

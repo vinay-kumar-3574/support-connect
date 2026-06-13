@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase.js';
+import { supabaseAuth } from '../config/supabase.js';
 
 export const verifyToken = async (req, res, next) => {
   try {
@@ -9,8 +9,8 @@ export const verifyToken = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // Verify token using Supabase admin client
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    // Verify token using the Auth client to avoid mutating the global DB client
+    const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
 
     if (error || !user) {
       return res.status(401).json({ success: false, error: 'Invalid or expired token' });

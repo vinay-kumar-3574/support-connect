@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase.js';
+import { supabase, supabaseAuth } from '../config/supabase.js';
 import { roomService } from '../config/livekit.js';
 import jwt from 'jsonwebtoken';
 
@@ -20,7 +20,7 @@ export const setupSocketHandlers = (io, app) => {
       }
 
       // If token provided (agent), verify it
-      const { data: { user }, error } = await supabase.auth.getUser(token);
+      const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
       if (error || !user) {
         return next(new Error('Authentication error: Invalid token'));
       }
@@ -53,29 +53,18 @@ export const setupSocketHandlers = (io, app) => {
 
         socket.join(sessionId);
 
-        // Upsert participant record
+        // Insert participant record
         const { data: participant, error } = await supabase
           .from('participants')
-          .upsert({
-            session_id: sessionId,
-            name: userName,
-            role: role,
-            socket_id: socket.id,
-            joined_at: new Date().toISOString(),
-            left_at: null // Clear left_at if they reconnected
-          }, { onConflict: 'session_id,name' }) // Assuming unique constraint or we just insert if no unique constraint
-          // Actually, upsert needs a unique key. If none, we can just insert.
-          .select()
-          .single();
-
-        if (error) {
-          // If upsert fails due to missing unique constraint, we fallback to insert
-          await supabase.from('participants').insert({
+          .insert({
             session_id: sessionId,
             name: userName,
             role: role,
             socket_id: socket.id,
           });
+
+        if (error) {
+          console.error("Failed to insert participant", error);
         }
 
         activeSocketsMap.set(socket.id, { sessionId, userName, role });
