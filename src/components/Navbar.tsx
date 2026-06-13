@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Video, LayoutDashboard, Shield, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Navbar({ variant = "public" }: { variant?: "public" | "agent" }) {
   const navigate = useNavigate();
