@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Video, MessageSquare, Circle, ArrowRight, Sparkles, Users, Headphones } from "lucide-react";
+import { Video, MessageSquare, Circle, ArrowRight, Sparkles, Users, Headphones, LogIn, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Navbar } from "@/components/Navbar";
+import { useStore } from "@/lib/store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
