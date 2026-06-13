@@ -24,14 +24,17 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: FRONTEND_URL,
+    origin: (origin, callback) => callback(null, true),
     methods: ['GET', 'POST'],
     credentials: true,
   }
 });
 
 // Middleware
-app.use(cors({ origin: FRONTEND_URL, credentials: true }));
+app.use(cors({ 
+  origin: (origin, callback) => callback(null, true), 
+  credentials: true 
+}));
 app.use(express.json());
 
 // Make io accessible in routes (e.g. for emitting session:ended from REST)
