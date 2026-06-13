@@ -14,6 +14,7 @@ import { useStore, formatDuration } from "@/lib/store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Dashboard — Vidline" }] }),
   component: () => (
     <AgentGuard>

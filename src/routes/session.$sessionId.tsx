@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useStore, formatDuration } from "@/lib/store";
 
 export const Route = createFileRoute("/session/$sessionId")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Session details — Vidline" }] }),
   component: () => (
     <AgentGuard>

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/room/$sessionId")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Call room — Vidline" }] }),
   component: Room,
 });
