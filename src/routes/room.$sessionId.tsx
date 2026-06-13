@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff, Camera, CameraOff, PhoneOff, Circle, MessageSquare, Send, X, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useStore, type ChatMessage, type Role } from "@/lib/store";
 import { toast } from "sonner";
@@ -163,7 +162,7 @@ function Room() {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <ScrollArea className="flex-1 px-4 py-3">
+            <div className="flex-1 overflow-y-auto px-4 py-3">
               {messages.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-8">No messages yet. Say hi!</p>
               ) : (
@@ -171,7 +170,7 @@ function Room() {
                   {messages.map((m) => <Message key={m.id} m={m} mine={m.sender === myName} />)}
                 </div>
               )}
-            </ScrollArea>
+            </div>
             <div className="p-3 border-t border-border/60 flex gap-2">
               <Input
                 placeholder="Message…"
