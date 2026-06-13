@@ -26,20 +26,21 @@ export function Navbar({ variant = "public" }: { variant?: "public" | "agent" })
 
         {variant === "agent" && agent ? (
           <nav className="flex items-center gap-1">
-            <Link to="/dashboard">
-              {({ isActive }) => (
-                <Button variant={isActive ? "secondary" : "ghost"} size="sm">
-                  <LayoutDashboard className="h-4 w-4" />
-                  Dashboard
-                </Button>
-              )}
-            </Link>
-            {agent.isAdmin && (
+            {agent.role === "admin" ? (
               <Link to="/admin">
                 {({ isActive }) => (
                   <Button variant={isActive ? "secondary" : "ghost"} size="sm">
                     <Shield className="h-4 w-4" />
-                    Admin
+                    Admin Panel
+                  </Button>
+                )}
+              </Link>
+            ) : (
+              <Link to="/dashboard">
+                {({ isActive }) => (
+                  <Button variant={isActive ? "secondary" : "ghost"} size="sm">
+                    <LayoutDashboard className="h-4 w-4" />
+                    Dashboard
                   </Button>
                 )}
               </Link>

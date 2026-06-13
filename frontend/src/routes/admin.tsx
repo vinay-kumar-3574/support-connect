@@ -30,11 +30,12 @@ function Admin() {
     fetchAllSessions();
   }, [fetchAllSessions]);
 
-  const [, force] = useState(0);
   useEffect(() => {
-    const i = setInterval(() => force((x) => x + 1), 3000);
+    const i = setInterval(() => {
+      fetchAllSessions();
+    }, 5000);
     return () => clearInterval(i);
-  }, []);
+  }, [fetchAllSessions]);
 
   const [query, setQuery] = useState("");
   const [from, setFrom] = useState("");
@@ -66,12 +67,40 @@ function Admin() {
     });
   }, [sessions, query, from, to]);
 
+  const adminCreateAgent = useStore((s) => s.adminCreateAgent);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
+  const handleCreateAgent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await adminCreateAgent({ fullName: newName, email: newEmail, password: newPassword });
+    if (!res.ok) {
+      toast.error(res.error || "Failed to create agent");
+    } else {
+      toast.success("Agent created successfully");
+      setCreateOpen(false);
+      setNewName("");
+      setNewEmail("");
+      setNewPassword("");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar variant="agent" />
       <main className="container mx-auto px-6 py-10">
-        <h1 className="text-3xl font-semibold">Admin overview</h1>
-        <p className="text-sm text-muted-foreground mt-1">Live activity and history across all agents.</p>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold">Admin overview</h1>
+            <p className="text-sm text-muted-foreground mt-1">Live activity and history across all agents.</p>
+          </div>
+          <Button onClick={() => setCreateOpen(true)} className="bg-gradient-brand text-primary-foreground shadow-glow hover:opacity-90">
+            <Users className="h-4 w-4 mr-2" />
+            Create Agent
+          </Button>
+        </div>
 
         {/* Metrics */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-8">
@@ -171,6 +200,33 @@ function Admin() {
           </Card>
         </section>
       </main>
+
+      {createOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-6 shadow-xl border-border/60">
+            <h2 className="text-xl font-semibold mb-1">Create Agent</h2>
+            <p className="text-sm text-muted-foreground mb-6">Provision a new support agent account.</p>
+            <form onSubmit={handleCreateAgent} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Full Name</label>
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} required placeholder="Alex Smith" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Email</label>
+                <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required placeholder="agent@company.com" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Password</label>
+                <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required placeholder="••••••••" />
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
+                <Button type="submit">Create account</Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

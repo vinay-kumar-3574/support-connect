@@ -53,6 +53,7 @@ interface StoreState {
   
   // Auth
   register: (data: any) => Promise<{ ok: boolean; error?: string }>;
+  adminCreateAgent: (data: any) => Promise<{ ok: boolean; error?: string }>;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
 
@@ -79,17 +80,30 @@ export const useStore = create<StoreState>()(
       adminSessions: [],
       messages: [],
 
-      register: async ({ fullName, email, password }) => {
+      register: async ({ fullName, email, password, role }) => {
         try {
           const data = await apiRequest('/auth/register', {
             method: 'POST',
-            body: JSON.stringify({ name: fullName, email, password }),
+            body: JSON.stringify({ name: fullName, email, password, role }),
           });
           if (data.token) {
             set({
               auth: { token: data.token, agent: { id: data.user.id, fullName: data.user.name, email: data.user.email, role: data.user.role } },
             });
           }
+          return { ok: true };
+        } catch (error: any) {
+          return { ok: false, error: error.message };
+        }
+      },
+
+      adminCreateAgent: async ({ fullName, email, password }) => {
+        try {
+          await apiRequest('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ name: fullName, email, password, role: 'agent' }),
+          });
+          // Note: we do not set the auth token here, because the admin is creating another user.
           return { ok: true };
         } catch (error: any) {
           return { ok: false, error: error.message };

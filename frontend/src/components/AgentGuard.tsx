@@ -9,10 +9,10 @@ export function AgentGuard({ children, requireAdmin = false }: { children: React
 
   useEffect(() => {
     if (!token) navigate({ to: "/login" });
-    else if (requireAdmin && !agent?.isAdmin) navigate({ to: "/dashboard" });
+    else if (requireAdmin && agent?.role !== "admin") navigate({ to: "/dashboard" });
   }, [token, agent, requireAdmin, navigate]);
 
   if (!token) return null;
-  if (requireAdmin && !agent?.isAdmin) return null;
+  if (requireAdmin && agent?.role !== "admin") return null;
   return <>{children}</>;
 }

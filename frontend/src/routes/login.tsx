@@ -17,7 +17,10 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const login = useStore((s) => s.login);
+  const register = useStore((s) => s.register);
   const [mode, setMode] = useState<"agent" | "admin">("agent");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
@@ -25,12 +28,19 @@ function LoginPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr("");
-    const res = await login(email, password);
-    if (!res.ok) return setErr(res.error || "Login failed");
+    
+    let res;
+    if (isSignUp) {
+      res = await register({ fullName: name, email, password, role: mode });
+    } else {
+      res = await login(email, password);
+    }
+
+    if (!res.ok) return setErr(res.error || (isSignUp ? "Registration failed" : "Login failed"));
+    
     const agent = useStore.getState().auth.agent;
-    // For now, any successful login will take the user to the dashboard 
-    // since we use a single 'agent' role in Supabase.
-    toast.success("Welcome back");
+    toast.success(isSignUp ? "Account created successfully" : "Welcome back");
+    
     if (agent?.role === "admin") {
       navigate({ to: "/admin" });
     } else {
@@ -43,6 +53,7 @@ function LoginPage() {
     setErr("");
     setEmail("");
     setPassword("");
+    setName("");
   };
 
   return (
@@ -66,16 +77,22 @@ function LoginPage() {
           </TabsList>
 
           <TabsContent value="agent" className="mt-6">
-            <h1 className="text-2xl font-semibold">Agent sign in</h1>
+            <h1 className="text-2xl font-semibold">{isSignUp ? "Agent sign up" : "Agent sign in"}</h1>
             <p className="text-sm text-muted-foreground mt-1">Access your support dashboard.</p>
           </TabsContent>
           <TabsContent value="admin" className="mt-6">
-            <h1 className="text-2xl font-semibold">Admin sign in</h1>
+            <h1 className="text-2xl font-semibold">{isSignUp ? "Admin sign up" : "Admin sign in"}</h1>
             <p className="text-sm text-muted-foreground mt-1">Monitor activity across all agents.</p>
           </TabsContent>
         </Tabs>
 
         <form onSubmit={submit} className="mt-6 space-y-4">
+          {isSignUp && (
+            <div className="space-y-1.5">
+              <Label htmlFor="name">Full Name</Label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Alex Smith" />
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder={mode === "admin" ? "admin@vidline.app" : "you@company.com"} />
@@ -86,17 +103,25 @@ function LoginPage() {
           </div>
           {err && <p className="text-sm text-destructive">{err}</p>}
           <Button type="submit" className="w-full bg-gradient-brand text-primary-foreground shadow-glow hover:opacity-90">
-            Sign in as {mode === "admin" ? "admin" : "agent"}
+            {isSignUp ? "Create account" : `Sign in as ${mode === "admin" ? "admin" : "agent"}`}
           </Button>
         </form>
 
-        <p className="mt-6 text-xs text-muted-foreground text-center">
-          {mode === "admin" ? (
-            <>Demo admin: <span className="font-mono text-foreground/80">admin@vidline.app</span> / <span className="font-mono text-foreground/80">admin1234</span></>
-          ) : (
-            <>Demo agent: <span className="font-mono text-foreground/80">demo@vidline.app</span> / <span className="font-mono text-foreground/80">demo1234</span></>
-          )}
-        </p>
+        <div className="mt-6 flex flex-col gap-2 items-center text-sm">
+          <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-primary hover:underline">
+            {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+          </button>
+        </div>
+
+        {!isSignUp && (
+          <p className="mt-6 text-xs text-muted-foreground text-center">
+            {mode === "admin" ? (
+              <>Demo admin: <span className="font-mono text-foreground/80">admin@vidline.app</span> / <span className="font-mono text-foreground/80">admin1234</span></>
+            ) : (
+              <>Demo agent: <span className="font-mono text-foreground/80">demo@vidline.app</span> / <span className="font-mono text-foreground/80">demo1234</span></>
+            )}
+          </p>
+        )}
       </Card>
     </div>
   );
