@@ -9,6 +9,7 @@ import { useStore } from "@/lib/store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/join/$token")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Join session — Vidline" }] }),
   component: JoinPage,
 });

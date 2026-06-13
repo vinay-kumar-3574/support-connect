@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { formatDuration } from "@/lib/store";
 
 export const Route = createFileRoute("/session-ended")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Session ended — Vidline" }] }),
   component: SessionEnded,
 });
