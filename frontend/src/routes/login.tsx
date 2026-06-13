@@ -22,18 +22,20 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr("");
-    const res = login(email, password);
+    const res = await login(email, password);
     if (!res.ok) return setErr(res.error || "Login failed");
     const agent = useStore.getState().auth.agent;
-    if (mode === "admin" && !agent?.isAdmin) {
-      useStore.getState().logout();
-      return setErr("These credentials are not for an admin account");
-    }
+    // For now, any successful login will take the user to the dashboard 
+    // since we use a single 'agent' role in Supabase.
     toast.success("Welcome back");
-    navigate({ to: agent?.isAdmin ? "/admin" : "/dashboard" });
+    if (agent?.role === "admin") {
+      navigate({ to: "/admin" });
+    } else {
+      navigate({ to: "/dashboard" });
+    }
   };
 
   const switchMode = (m: string) => {

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Plus, Copy, LogIn, X, Clock, Users, Activity } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { AgentGuard } from "@/components/AgentGuard";
@@ -34,6 +34,12 @@ function Dashboard() {
   const [inviteUrl, setInviteUrl] = useState("");
   const [inviteId, setInviteId] = useState("");
 
+  const fetchSessions = useStore((s) => s.fetchSessions);
+
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
+
   const myActive = sessions.filter((s) => s.agentId === agent?.id && s.status === "active");
   const myPast = sessions.filter((s) => s.agentId === agent?.id && s.status === "ended");
 
@@ -47,8 +53,9 @@ function Dashboard() {
     };
   }, [sessions, agent]);
 
-  const handleCreate = () => {
-    const sess = create();
+  const handleCreate = async () => {
+    const sess = await create();
+    if (!sess) return toast.error("Failed to create session");
     const url = `${window.location.origin}/join/${sess.inviteToken}`;
     setInviteUrl(url);
     setInviteId(sess.id);
@@ -117,7 +124,7 @@ function Dashboard() {
                           <LogIn className="h-4 w-4" />
                           Enter call
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => { end(s.id); toast.success("Session ended"); }}>
+                        <Button size="sm" variant="outline" onClick={async () => { await end(s.id); toast.success("Session ended"); }}>
                           <X className="h-4 w-4" />
                           End
                         </Button>

@@ -17,10 +17,21 @@ export const Route = createFileRoute("/join/$token")({
 function JoinPage() {
   const { token } = useParams({ from: "/join/$token" });
   const navigate = useNavigate();
-  const getSessionByToken = useStore((s) => s.getSessionByToken);
-  const join = useStore((s) => s.joinSession);
+  const [session, setSession] = useState<{ id: string, status: string, agent_name: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    fetch(`/api/session/join/${token}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setSession(data.data);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [token]);
 
-  const session = getSessionByToken(token);
   const valid = session && session.status === "active";
 
   const [name, setName] = useState("");
@@ -46,7 +57,6 @@ function JoinPage() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !session) return;
-    join(session.id, name.trim(), "customer");
     sessionStorage.setItem(`vidline-name-${session.id}`, name.trim());
     sessionStorage.setItem(`vidline-role-${session.id}`, "customer");
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -83,7 +93,7 @@ function JoinPage() {
 
         <h1 className="text-2xl font-semibold">Ready to join the call</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          You're joining a session with <span className="text-foreground font-medium">{session.agentName}</span>.
+          You're joining a session with <span className="text-foreground font-medium">{session?.agent_name || "an agent"}</span>.
         </p>
 
         <div className="mt-6 aspect-video rounded-xl bg-black overflow-hidden relative border border-border/60">

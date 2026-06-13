@@ -1,12 +1,19 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Mic, MicOff, Camera, CameraOff, PhoneOff, Circle, MessageSquare, Send, X, Users } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { useStore, type ChatMessage, type Role, type Session } from "@/lib/store";
+import { useStore, type ChatMessage, type Role } from "@/lib/store";
+import { socketService } from "@/lib/socket";
+import { apiRequest } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  LiveKitRoom,
+  VideoConference,
+  RoomAudioRenderer,
+} from "@livekit/components-react";
+import "@livekit/components-styles";
 
 export const Route = createFileRoute("/room/$sessionId")({
   ssr: false,
@@ -18,101 +25,76 @@ function Room() {
   const { sessionId } = useParams({ from: "/room/$sessionId" });
   const navigate = useNavigate();
 
-  const sessions = useStore((s) => s.sessions);
-  const session = useMemo(
-    () => sessions.find((x) => x.id === sessionId),
-    [sessions, sessionId],
-  );
-  const agent = useStore((s) => s.auth.agent);
+  const authState = useStore((s) => s.auth);
+  const agent = authState.agent;
+  
   const allMessages = useStore((s) => s.messages);
   const messages = useMemo(
     () => allMessages.filter((m) => m.sessionId === sessionId),
     [allMessages, sessionId],
   );
+  
   const sendMessage = useStore((s) => s.sendMessage);
-  const endSession = useStore((s) => s.endSession);
-  const leaveSession = useStore((s) => s.leaveSession);
-  const toggleRec = useStore((s) => s.toggleRecording);
+  const markSessionEnded = useStore((s) => s.markSessionEnded);
 
-  // Determine role/name
   const storedName = sessionStorage.getItem(`vidline-name-${sessionId}`);
   const storedRole = sessionStorage.getItem(`vidline-role-${sessionId}`) as Role | null;
   const role: Role = storedRole ?? (agent ? "agent" : "customer");
   const myName = storedName ?? agent?.fullName ?? "Guest";
 
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
   const [draft, setDraft] = useState("");
+  
+  const [livekitToken, setLivekitToken] = useState("");
+  const [livekitHost, setLivekitHost] = useState("");
+  const [error, setError] = useState("");
 
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  const activeSession = useMemo<Session>(() => {
-    if (session) return session;
-    return {
-      id: sessionId,
-      inviteToken: "",
-      agentId: agent?.id ?? "demo",
-      agentName: agent?.fullName ?? "Support agent",
-      createdAt: Date.now(),
-      status: "active",
-      recording: false,
-      participants: [{ name: myName, role, joinedAt: Date.now() }],
-    };
-  }, [agent?.fullName, agent?.id, myName, role, session, sessionId]);
-
+  // 1. Fetch LiveKit Token & Connect Socket
   useEffect(() => {
-    navigator.mediaDevices
-      ?.getUserMedia({ video: true, audio: true })
-      .then((stream) => {
-        streamRef.current = stream;
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      })
-      .catch(() => toast.error("Couldn't access camera/microphone"));
-    return () => streamRef.current?.getTracks().forEach((t) => t.stop());
-  }, []);
+    let active = true;
 
-  useEffect(() => {
-    if (!streamRef.current) return;
-    streamRef.current.getAudioTracks().forEach((t) => (t.enabled = micOn));
-  }, [micOn]);
+    async function initConnection() {
+      try {
+        // Fetch token from backend
+        const data = await apiRequest('/livekit/token', {
+          method: 'POST',
+          body: JSON.stringify({ sessionId, userName: myName, role }),
+        });
 
-  useEffect(() => {
-    if (!streamRef.current) return;
-    streamRef.current.getVideoTracks().forEach((t) => (t.enabled = camOn));
-  }, [camOn]);
-
-  // Redirect when session ends
-  useEffect(() => {
-    if (!session) return;
-    if (session.status === "ended") {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      if (role === "agent") {
-        navigate({ to: "/session/$sessionId", params: { sessionId } });
-      } else {
-        const duration = (session.endedAt ?? Date.now()) - session.createdAt;
-        sessionStorage.setItem("vidline-last-duration", String(duration));
-        navigate({ to: "/session-ended" });
+        if (active) {
+          setLivekitToken(data.token);
+          setLivekitHost(data.livekit_host || 'ws://localhost:7880');
+          
+          // Connect Socket
+          socketService.connect(authState.token);
+          socketService.joinSession(sessionId, myName, role);
+        }
+      } catch (err: any) {
+        if (active) {
+          setError(err.message || 'Failed to connect to room');
+          toast.error(err.message || 'Failed to connect to room');
+        }
       }
     }
-  }, [session, role, navigate, sessionId]);
 
-  const activeParticipants = activeSession.participants.filter((p) => !p.leftAt);
-  const remote = activeParticipants.find((p) => p.name !== myName);
+    initConnection();
 
-  const handleEnd = () => {
-    if (role === "agent") {
-      if (session) endSession(sessionId);
-      toast.success("Session ended");
-    } else {
-      if (session) leaveSession(sessionId, myName);
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      const duration = Date.now() - activeSession.createdAt;
-      sessionStorage.setItem("vidline-last-duration", String(duration));
-      navigate({ to: "/session-ended" });
+    return () => {
+      active = false;
+      // We don't disconnect the socket here completely because they might navigate away temporarily
+      // But we could emit a leave event if needed. The backend handles disconnect grace periods.
+    };
+  }, [sessionId, myName, role, authState.token]);
+
+  // 2. Listen to Session Ended in store (from Socket)
+  const sessions = useStore(s => s.sessions);
+  const session = sessions.find(s => s.id === sessionId);
+  useEffect(() => {
+    if (session?.status === 'ended') {
+      toast.info("Session ended");
+      navigate({ to: role === 'agent' ? '/dashboard' : '/session-ended' });
     }
-  };
+  }, [session?.status, navigate, role]);
 
   const handleSend = () => {
     const text = draft.trim();
@@ -121,57 +103,53 @@ function Room() {
     setDraft("");
   };
 
+  if (error) {
+    return <div className="h-screen flex items-center justify-center bg-background text-destructive">{error}</div>;
+  }
+
+  if (!livekitToken || !livekitHost) {
+    return <div className="h-screen flex items-center justify-center bg-background text-muted-foreground">Connecting to secure room...</div>;
+  }
+
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
-      {/* Header */}
-      <header className="h-14 px-6 flex items-center justify-between border-b border-border/60 bg-card backdrop-blur">
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-muted-foreground">#{activeSession.id}</span>
-          {activeSession.recording && (
-            <Badge variant="destructive" className="gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
-              Recording
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Users className="h-4 w-4" />
-          {activeParticipants.length} in call
-        </div>
-      </header>
-
       {/* Body */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Video area */}
-        <div className="flex-1 relative p-4">
-          <VideoTile
-            label={remote?.name ?? "Waiting for participant…"}
-            placeholder={!remote}
-            big
-          />
-          {/* Local PIP */}
-          <div className="absolute bottom-6 right-6 w-48 sm:w-64 aspect-video rounded-xl overflow-hidden border-2 border-border bg-black shadow-card">
-            {camOn ? (
-              <video ref={localVideoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
-            ) : (
-              <AvatarPlaceholder name={myName} />
-            )}
-            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-              <span className="rounded bg-black/60 px-2 py-0.5 text-xs text-white">You ({myName})</span>
-              {!micOn && (
-                <span className="rounded-full bg-destructive p-1 text-destructive-foreground">
-                  <MicOff className="h-3 w-3" />
-                </span>
-              )}
-            </div>
+        {/* LiveKit Video Area */}
+        <div className="flex-1 relative bg-black">
+          <LiveKitRoom
+            video={true}
+            audio={true}
+            token={livekitToken}
+            serverUrl={livekitHost}
+            connect={true}
+            className="h-full w-full"
+            onDisconnected={() => {
+              if (role === 'agent') {
+                navigate({ to: '/dashboard' });
+              } else {
+                navigate({ to: '/session-ended' });
+              }
+            }}
+          >
+            {/* The VideoConference component provides the default layout, mic/cam controls, and active speaker logic */}
+            <VideoConference />
+            <RoomAudioRenderer />
+          </LiveKitRoom>
+
+          {/* Toggle Custom Chat Button overlay (in case LiveKit controls hide it) */}
+          <div className="absolute top-4 right-4 z-50">
+            <Button variant="secondary" size="icon" className="rounded-full shadow-lg" onClick={() => setChatOpen(!chatOpen)}>
+              <MessageSquare className="h-5 w-5" />
+            </Button>
           </div>
         </div>
 
-        {/* Chat sidebar */}
+        {/* Custom Socket.io Chat sidebar */}
         {chatOpen && (
-          <aside className="w-80 border-l border-border/60 bg-card flex flex-col">
+          <aside className="w-80 border-l border-border/60 bg-card flex flex-col z-40 relative">
             <div className="h-12 px-4 flex items-center justify-between border-b border-border/60">
-              <h3 className="font-medium text-sm">Chat</h3>
+              <h3 className="font-medium text-sm">Socket.io Chat</h3>
               <Button variant="ghost" size="icon" onClick={() => setChatOpen(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -192,83 +170,10 @@ function Room() {
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
               />
-              <Button size="icon" onClick={handleSend}><Send className="h-4 w-4" /></Button>
+              <Button size="sm" onClick={handleSend}>Send</Button>
             </div>
           </aside>
         )}
-      </div>
-
-      {/* Control bar */}
-      <div className="h-20 border-t border-border/60 bg-card backdrop-blur flex items-center justify-center gap-2">
-        <ControlButton active={micOn} onClick={() => setMicOn(!micOn)} icon={micOn ? Mic : MicOff} danger={!micOn} />
-        <ControlButton active={camOn} onClick={() => setCamOn(!camOn)} icon={camOn ? Camera : CameraOff} danger={!camOn} />
-        {role === "agent" && (
-          <ControlButton
-            active={activeSession.recording}
-            onClick={() => session ? toggleRec(sessionId) : toast.info("Recording is available after creating a session")}
-            icon={Circle}
-            danger={activeSession.recording}
-            label={activeSession.recording ? "Stop" : "Record"}
-          />
-        )}
-        <ControlButton active={chatOpen} onClick={() => setChatOpen(!chatOpen)} icon={MessageSquare} />
-        <div className="mx-2 h-8 w-px bg-border" />
-        <Button size="lg" variant="destructive" onClick={handleEnd} className="rounded-full px-6">
-          <PhoneOff className="h-4 w-4" />
-          {role === "agent" ? "End for all" : "Leave"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function ControlButton({
-  icon: Icon, active, onClick, danger, label,
-}: { icon: any; active: boolean; onClick: () => void; danger?: boolean; label?: string }) {
-  return (
-    <Button
-      size="lg"
-      variant="ghost"
-      onClick={onClick}
-      className={cn(
-        "rounded-full h-12 w-12 p-0",
-        label && "w-auto px-4",
-        danger ? "bg-destructive/15 text-destructive hover:bg-destructive/25" : active ? "bg-secondary" : "bg-secondary",
-      )}
-    >
-      <Icon className="h-5 w-5" />
-      {label && <span className="ml-2 text-sm">{label}</span>}
-    </Button>
-  );
-}
-
-function VideoTile({ label, placeholder, big }: { label: string; placeholder?: boolean; big?: boolean }) {
-  return (
-    <div className={cn("relative w-full h-full rounded-2xl overflow-hidden bg-[oklch(0.18_0.02_240)] border border-border/60")}>
-      {placeholder ? (
-        <AvatarPlaceholder name={label} />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-[oklch(0.22_0.04_220)] to-[oklch(0.18_0.04_260)]">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <AvatarPlaceholder name={label} />
-          </div>
-        </div>
-      )}
-      <div className="absolute bottom-4 left-4">
-        <span className="rounded-lg bg-black/60 backdrop-blur px-3 py-1.5 text-sm text-white font-medium">
-          {label}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function AvatarPlaceholder({ name }: { name: string }) {
-  const initial = name.trim()[0]?.toUpperCase() ?? "?";
-  return (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <div className="h-24 w-24 rounded-full bg-gradient-brand flex items-center justify-center text-4xl font-semibold text-primary-foreground shadow-glow">
-        {initial}
       </div>
     </div>
   );

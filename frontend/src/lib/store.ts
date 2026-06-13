@@ -1,28 +1,21 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { apiRequest } from './api';
 
-export type Role = "agent" | "customer";
+export type Role = 'agent' | 'customer';
 
 export interface Agent {
   id: string;
   fullName: string;
   email: string;
-  password: string; // mock only
-  isAdmin?: boolean;
+  role?: string;
 }
 
 export interface ChatMessage {
   id: string;
   sessionId: string;
   sender: string;
-  role: Role;
-  text: string;
-  timestamp: number;
-}
-
-export interface SessionEvent {
-  id: string;
-  sessionId: string;
+  role?: Role;
   text: string;
   timestamp: number;
 }
@@ -41,9 +34,7 @@ export interface Session {
   agentName: string;
   createdAt: number;
   endedAt?: number;
-  status: "active" | "ended";
-  recording: boolean;
-  recordingReady?: boolean;
+  status: 'active' | 'ended';
   participants: Participant[];
 }
 
@@ -53,166 +44,176 @@ interface AuthState {
 }
 
 interface StoreState {
-  agents: Agent[];
   auth: AuthState;
   sessions: Session[];
+  adminSessions: Session[];
   messages: ChatMessage[];
-  events: SessionEvent[];
-
-  register: (data: Omit<Agent, "id">) => { ok: boolean; error?: string };
-  login: (email: string, password: string) => { ok: boolean; error?: string };
+  
+  // Auth
+  register: (data: any) => Promise<{ ok: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
 
-  createSession: () => Session;
-  endSession: (sessionId: string) => void;
-  joinSession: (sessionId: string, name: string, role: Role) => void;
-  leaveSession: (sessionId: string, name: string) => void;
-  toggleRecording: (sessionId: string) => void;
-
+  // Sessions
+  fetchSessions: () => Promise<void>;
+  fetchAllSessions: () => Promise<void>;
+  createSession: () => Promise<Session | null>;
+  endSession: (sessionId: string) => Promise<void>;
+  
+  // Socket Handlers
+  receiveMessage: (payload: any) => void;
+  markSessionEnded: (sessionId: string) => void;
+  
+  // Chat
   sendMessage: (sessionId: string, sender: string, role: Role, text: string) => void;
-  addEvent: (sessionId: string, text: string) => void;
-
-  getSessionByToken: (token: string) => Session | undefined;
 }
-
-const uid = () => Math.random().toString(36).slice(2, 10);
-const mockToken = (agentId: string) =>
-  btoa(JSON.stringify({ sub: agentId, role: "agent", iat: Date.now() }));
 
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
-      agents: [
-        {
-          id: "demo",
-          fullName: "Demo Agent",
-          email: "demo@vidline.app",
-          password: "demo1234",
-        },
-        {
-          id: "admin",
-          fullName: "Vidline Admin",
-          email: "admin@vidline.app",
-          password: "admin1234",
-          isAdmin: true,
-        },
-      ],
       auth: { token: null, agent: null },
       sessions: [],
+      adminSessions: [],
       messages: [],
-      events: [],
 
-      register: ({ fullName, email, password }) => {
-        const exists = get().agents.find((a) => a.email === email);
-        if (exists) return { ok: false, error: "Email already in use" };
-        const agent: Agent = { id: uid(), fullName, email, password };
-        set((s) => ({
-          agents: [...s.agents, agent],
-          auth: { token: mockToken(agent.id), agent },
-        }));
-        return { ok: true };
+      register: async ({ fullName, email, password }) => {
+        try {
+          const data = await apiRequest('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ name: fullName, email, password }),
+          });
+          if (data.token) {
+            set({
+              auth: { token: data.token, agent: { id: data.user.id, fullName: data.user.name, email: data.user.email, role: data.user.role } },
+            });
+          }
+          return { ok: true };
+        } catch (error: any) {
+          return { ok: false, error: error.message };
+        }
       },
 
-      login: (email, password) => {
-        const agent = get().agents.find(
-          (a) => a.email === email && a.password === password,
-        );
-        if (!agent) return { ok: false, error: "Invalid email or password" };
-        set({ auth: { token: mockToken(agent.id), agent } });
-        return { ok: true };
+      login: async (email, password) => {
+        try {
+          const data = await apiRequest('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password }),
+          });
+          set({
+            auth: { token: data.token, agent: { id: data.user.id, fullName: data.user.name, email: data.user.email, role: data.user.role } },
+          });
+          return { ok: true };
+        } catch (error: any) {
+          return { ok: false, error: error.message };
+        }
       },
 
-      logout: () => set({ auth: { token: null, agent: null } }),
+      logout: () => set({ auth: { token: null, agent: null }, sessions: [], adminSessions: [] }),
 
-      createSession: () => {
-        const agent = get().auth.agent!;
-        const session: Session = {
-          id: uid(),
-          inviteToken: uid() + uid(),
-          agentId: agent.id,
-          agentName: agent.fullName,
-          createdAt: Date.now(),
-          status: "active",
-          recording: false,
-          participants: [
-            { name: agent.fullName, role: "agent", joinedAt: Date.now() },
-          ],
+      fetchSessions: async () => {
+        if (!get().auth.token) return;
+        try {
+          const data = await apiRequest('/session');
+          // Map backend format to frontend format
+          const formattedSessions: Session[] = data.map((s: any) => ({
+            id: s.id,
+            inviteToken: s.invite_token,
+            agentId: s.created_by,
+            agentName: 'Agent', // Could be populated from elsewhere
+            createdAt: new Date(s.started_at).getTime(),
+            endedAt: s.ended_at ? new Date(s.ended_at).getTime() : undefined,
+            status: s.status,
+            participants: s.participants ? s.participants.map((p: any) => ({
+              name: p.name,
+              role: p.role,
+              joinedAt: new Date(p.joined_at).getTime(),
+              leftAt: p.left_at ? new Date(p.left_at).getTime() : undefined,
+            })) : []
+          }));
+          set({ sessions: formattedSessions });
+        } catch (err) {
+          console.error('Failed to fetch sessions', err);
+        }
+      },
+
+      fetchAllSessions: async () => {
+        if (!get().auth.token) return;
+        try {
+          const data = await apiRequest('/session/all');
+          const formattedSessions: Session[] = data.map((s: any) => ({
+            id: s.id,
+            inviteToken: s.invite_token,
+            agentId: s.created_by,
+            agentName: 'Agent', // Replace with real agent name later if needed
+            createdAt: new Date(s.started_at).getTime(),
+            endedAt: s.ended_at ? new Date(s.ended_at).getTime() : undefined,
+            status: s.status,
+            participants: s.participants ? s.participants.map((p: any) => ({
+              name: p.name,
+              role: p.role,
+              joinedAt: new Date(p.joined_at).getTime(),
+              leftAt: p.left_at ? new Date(p.left_at).getTime() : undefined,
+            })) : []
+          }));
+          set({ adminSessions: formattedSessions });
+        } catch (err) {
+          console.error('Failed to fetch all sessions', err);
+        }
+      },
+
+      createSession: async () => {
+        try {
+          const data = await apiRequest('/session/create', { method: 'POST' });
+          const newSession: Session = {
+            id: data.id,
+            inviteToken: data.invite_token,
+            agentId: get().auth.agent?.id || '',
+            agentName: get().auth.agent?.fullName || 'Agent',
+            createdAt: Date.now(),
+            status: 'active',
+            participants: []
+          };
+          set((state) => ({ sessions: [newSession, ...state.sessions] }));
+          return newSession;
+        } catch (err) {
+          console.error('Failed to create session', err);
+          return null;
+        }
+      },
+
+      endSession: async (sessionId) => {
+        try {
+          await apiRequest(`/session/${sessionId}/end`, { method: 'PATCH' });
+          get().markSessionEnded(sessionId);
+        } catch (err) {
+          console.error('Failed to end session', err);
+        }
+      },
+
+      receiveMessage: (payload) => {
+        const { senderName, content, sent_at, sessionId } = payload;
+        const msg: ChatMessage = {
+          id: Math.random().toString(),
+          sessionId,
+          sender: senderName,
+          text: content,
+          timestamp: new Date(sent_at).getTime(),
         };
-        set((s) => ({ sessions: [session, ...s.sessions] }));
-        get().addEvent(session.id, `Session created by ${agent.fullName}`);
-        return session;
+        set((s) => ({ messages: [...s.messages, msg] }));
       },
 
-      endSession: (sessionId) => {
+      markSessionEnded: (sessionId) => {
         set((s) => ({
           sessions: s.sessions.map((sess) =>
-            sess.id === sessionId
-              ? {
-                  ...sess,
-                  status: "ended",
-                  endedAt: Date.now(),
-                  recording: false,
-                  recordingReady: sess.recording ? true : sess.recordingReady,
-                  participants: sess.participants.map((p) =>
-                    p.leftAt ? p : { ...p, leftAt: Date.now() },
-                  ),
-                }
-              : sess,
+            sess.id === sessionId ? { ...sess, status: 'ended', endedAt: Date.now() } : sess
           ),
         }));
-        get().addEvent(sessionId, "Session ended");
-      },
-
-      joinSession: (sessionId, name, role) => {
-        set((s) => ({
-          sessions: s.sessions.map((sess) => {
-            if (sess.id !== sessionId) return sess;
-            if (sess.participants.find((p) => p.name === name && !p.leftAt)) return sess;
-            return {
-              ...sess,
-              participants: [
-                ...sess.participants,
-                { name, role, joinedAt: Date.now() },
-              ],
-            };
-          }),
-        }));
-        get().addEvent(sessionId, `${name} (${role}) joined`);
-      },
-
-      leaveSession: (sessionId, name) => {
-        set((s) => ({
-          sessions: s.sessions.map((sess) =>
-            sess.id === sessionId
-              ? {
-                  ...sess,
-                  participants: sess.participants.map((p) =>
-                    p.name === name && !p.leftAt ? { ...p, leftAt: Date.now() } : p,
-                  ),
-                }
-              : sess,
-          ),
-        }));
-        get().addEvent(sessionId, `${name} left`);
-      },
-
-      toggleRecording: (sessionId) => {
-        const sess = get().sessions.find((s) => s.id === sessionId);
-        if (!sess) return;
-        const newVal = !sess.recording;
-        set((s) => ({
-          sessions: s.sessions.map((x) =>
-            x.id === sessionId
-              ? { ...x, recording: newVal, recordingReady: !newVal && (x.recording || x.recordingReady) }
-              : x,
-          ),
-        }));
-        get().addEvent(sessionId, newVal ? "Recording started" : "Recording stopped");
       },
 
       sendMessage: (sessionId, sender, role, text) => {
+        // Optimistically add to UI, socket will broadcast to others
         const msg: ChatMessage = {
-          id: uid(),
+          id: Math.random().toString(),
           sessionId,
           sender,
           role,
@@ -220,39 +221,20 @@ export const useStore = create<StoreState>()(
           timestamp: Date.now(),
         };
         set((s) => ({ messages: [...s.messages, msg] }));
+        
+        // Let the socket.ts handle emission, store doesn't need to do it if component triggers it,
+        // but component calls store.sendMessage right now. So we must emit here.
+        import('./socket').then(({ socketService }) => {
+          socketService.sendMessage(sessionId, sender, text);
+        });
       },
-
-      addEvent: (sessionId, text) => {
-        set((s) => ({
-          events: [
-            ...s.events,
-            { id: uid(), sessionId, text, timestamp: Date.now() },
-          ],
-        }));
-      },
-
-      getSessionByToken: (token) =>
-        get().sessions.find((s) => s.inviteToken === token),
     }),
     {
-      name: "vidline-store",
-      version: 2,
-      migrate: (persisted: any) => {
-        if (persisted && Array.isArray(persisted.agents)) {
-          if (!persisted.agents.find((a: Agent) => a.email === "admin@vidline.app")) {
-            persisted.agents.push({
-              id: "admin",
-              fullName: "Vidline Admin",
-              email: "admin@vidline.app",
-              password: "admin1234",
-              isAdmin: true,
-            });
-          }
-        }
-        return persisted;
-      },
-    },
-  ),
+      name: 'vidline-store',
+      version: 3,
+      partialize: (state) => ({ auth: state.auth }), // Only persist auth
+    }
+  )
 );
 
 export const formatDuration = (ms: number) => {

@@ -22,8 +22,13 @@ export const Route = createFileRoute("/admin")({
 });
 
 function Admin() {
-  const sessions = useStore((s) => s.sessions);
+  const sessions = useStore((s) => s.adminSessions);
   const endSession = useStore((s) => s.endSession);
+  const fetchAllSessions = useStore((s) => s.fetchAllSessions);
+
+  useEffect(() => {
+    fetchAllSessions();
+  }, [fetchAllSessions]);
 
   const [, force] = useState(0);
   useEffect(() => {
