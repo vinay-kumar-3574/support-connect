@@ -8,6 +8,7 @@ export interface Agent {
   fullName: string;
   email: string;
   password: string; // mock only
+  isAdmin?: boolean;
 }
 
 export interface ChatMessage {
