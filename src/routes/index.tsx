@@ -23,7 +23,12 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   const [token, setToken] = useState("");
+  const [getStartedOpen, setGetStartedOpen] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joinToken, setJoinToken] = useState("");
   const navigate = useNavigate();
+  const agent = useStore((s) => s.auth.agent);
+  const createSession = useStore((s) => s.createSession);
 
   const handleJoin = () => {
     const trimmed = token.trim();
@@ -35,6 +40,28 @@ function Landing() {
     const match = trimmed.match(/\/join\/([^/?#]+)/);
     const t = match ? match[1] : trimmed;
     navigate({ to: "/join/$token", params: { token: t } });
+  };
+
+  const handleJoinFromDialog = () => {
+    const trimmed = joinToken.trim();
+    if (!trimmed) return toast.error("Paste your invite link or token first");
+    const match = trimmed.match(/\/join\/([^/?#]+)/);
+    const t = match ? match[1] : trimmed;
+    setGetStartedOpen(false);
+    setJoinOpen(false);
+    navigate({ to: "/join/$token", params: { token: t } });
+  };
+
+  const handleHost = () => {
+    if (!agent) {
+      setGetStartedOpen(false);
+      navigate({ to: "/login" });
+      return;
+    }
+    const sess = createSession();
+    setGetStartedOpen(false);
+    toast.success("Session created");
+    navigate({ to: "/room/$sessionId", params: { sessionId: sess.id } });
   };
 
   return (
@@ -57,14 +84,16 @@ function Landing() {
             session recording — all from the browser. Customers join with a single link.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              size="lg"
+              onClick={() => setGetStartedOpen(true)}
+              className="bg-gradient-brand text-primary-foreground shadow-glow hover:opacity-90"
+            >
+              Get started
+              <ArrowRight className="h-4 w-4" />
+            </Button>
             <Link to="/login">
-              <Button size="lg" className="bg-gradient-brand text-primary-foreground shadow-glow hover:opacity-90">
-                Agent sign in
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button size="lg" variant="outline">Create agent account</Button>
+              <Button size="lg" variant="outline">Agent sign in</Button>
             </Link>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
@@ -72,6 +101,63 @@ function Landing() {
           </p>
         </div>
       </section>
+
+      <Dialog open={getStartedOpen} onOpenChange={setGetStartedOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>How would you like to start?</DialogTitle>
+            <DialogDescription>
+              Join an existing call with an invite link, or host a new one as a support agent.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2 mt-2">
+            <button
+              type="button"
+              onClick={() => { setGetStartedOpen(false); setJoinOpen(true); }}
+              className="text-left rounded-lg border border-border/60 p-5 hover:border-primary/60 hover:bg-accent/40 transition-colors"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <LogIn className="h-5 w-5" />
+              </div>
+              <p className="mt-3 font-semibold">Join a call</p>
+              <p className="text-sm text-muted-foreground mt-1">Paste your invite link from an agent.</p>
+            </button>
+            <button
+              type="button"
+              onClick={handleHost}
+              className="text-left rounded-lg border border-border/60 p-5 hover:border-primary/60 hover:bg-accent/40 transition-colors"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <Phone className="h-5 w-5" />
+              </div>
+              <p className="mt-3 font-semibold">Host a call</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {agent ? "Start a new session and share the link." : "Sign in as an agent to host."}
+              </p>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Join a call</DialogTitle>
+            <DialogDescription>Paste the invite link or token your agent sent you.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col sm:flex-row gap-2 mt-2">
+            <Input
+              placeholder="Invite link or token…"
+              value={joinToken}
+              onChange={(e) => setJoinToken(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleJoinFromDialog()}
+              autoFocus
+            />
+            <Button onClick={handleJoinFromDialog}>Join</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Customer join */}
       <section className="container mx-auto px-6 pb-20">
