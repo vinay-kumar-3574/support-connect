@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import ws from 'ws';
 
 dotenv.config();
 
@@ -18,6 +19,9 @@ export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
     autoRefreshToken: false,
     persistSession: false,
   },
+  global: {
+    WebSocket: ws,
+  }
 });
 
 // Auth client using Anon Key for signups and logins (prevents JWT pollution on the global client)
@@ -26,4 +30,7 @@ export const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: false,
     persistSession: false,
   },
+  global: {
+    WebSocket: ws,
+  }
 });
