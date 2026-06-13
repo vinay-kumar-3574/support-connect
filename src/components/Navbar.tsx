@@ -34,14 +34,16 @@ export function Navbar({ variant = "public" }: { variant?: "public" | "agent" })
                 </Button>
               )}
             </Link>
-            <Link to="/admin">
-              {({ isActive }) => (
-                <Button variant={isActive ? "secondary" : "ghost"} size="sm">
-                  <Shield className="h-4 w-4" />
-                  Admin
-                </Button>
-              )}
-            </Link>
+            {agent.isAdmin && (
+              <Link to="/admin">
+                {({ isActive }) => (
+                  <Button variant={isActive ? "secondary" : "ghost"} size="sm">
+                    <Shield className="h-4 w-4" />
+                    Admin
+                  </Button>
+                )}
+              </Link>
+            )}
             <div className="mx-3 h-6 w-px bg-border" />
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {agent.fullName}
