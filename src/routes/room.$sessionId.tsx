@@ -44,6 +44,14 @@ function Room() {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("minimal")) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[oklch(0.12_0.02_240)] text-foreground">
+        <p className="font-mono text-sm">Room {sessionId} loaded</p>
+      </div>
+    );
+  }
+
   useEffect(() => {
     navigator.mediaDevices
       ?.getUserMedia({ video: true, audio: true })
