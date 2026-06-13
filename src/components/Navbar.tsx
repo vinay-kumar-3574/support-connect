@@ -60,11 +60,6 @@ export function Navbar({ variant = "public" }: { variant?: "public" | "agent" })
             <Link to="/login">
               <Button variant="ghost" size="sm">Agent login</Button>
             </Link>
-            <Link to="/register">
-              <Button size="sm" className="bg-gradient-brand text-primary-foreground shadow-glow hover:opacity-90">
-                Get started
-              </Button>
-            </Link>
           </nav>
         )}
       </div>
