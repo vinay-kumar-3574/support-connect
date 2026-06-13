@@ -2,7 +2,7 @@ import { supabaseAuth } from '../config/supabase.js';
 
 export const register = async (req, res) => {
   try {
-    const { email, password, name, role } = req.body;
+    const { email, password, name } = req.body;
 
     if (!email || !password || !name) {
       return res.status(400).json({ success: false, error: 'Email, password, and name are required' });
@@ -14,7 +14,6 @@ export const register = async (req, res) => {
       options: {
         data: {
           name,
-          role: role === 'admin' ? 'admin' : 'agent'
         },
       },
     });
@@ -27,12 +26,13 @@ export const register = async (req, res) => {
     const session = data.session;
 
     if (!session) {
-      return res.status(200).json({ 
-        success: true, 
-        data: { 
-          user, 
-          message: 'Registration successful. Please check your email to verify your account.' 
-        } 
+      // Sometimes session is null if email confirmation is required
+      return res.status(200).json({
+        success: true,
+        data: {
+          user,
+          message: 'Registration successful. Please check your email to verify your account.'
+        }
       });
     }
 
@@ -44,7 +44,7 @@ export const register = async (req, res) => {
           id: user.id,
           email: user.email,
           name: user.user_metadata.name,
-          role: user.user_metadata.role || 'agent'
+          role: 'admin'
         }
       }
     });
@@ -82,7 +82,7 @@ export const login = async (req, res) => {
           id: user.id,
           email: user.email,
           name: user.user_metadata?.name || '',
-          role: user.user_metadata?.role || (user.email === 'admin@vidline.app' ? 'admin' : 'agent')
+          role: 'admin' // Granted admin to all users for demo purposes
         }
       }
     });
