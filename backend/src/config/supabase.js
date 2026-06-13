@@ -2,6 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import ws from 'ws';
 
+// Hard polyfill for Node.js 20
+globalThis.WebSocket = ws;
+global.WebSocket = ws;
+
 dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
