@@ -2,6 +2,8 @@
 
 A real-time video-assisted customer support platform built for the modern web. Support Connect allows customer service agents to conduct high-quality, low-latency video calls with customers directly through their browser—no app installation required!
 
+**🔴 Live Demo:** [https://support-connect.vercel.app/](https://support-connect.vercel.app/)
+
 ## 🌟 Features
 
 - **Agent Dashboard:** Secure login and session management for support agents.
