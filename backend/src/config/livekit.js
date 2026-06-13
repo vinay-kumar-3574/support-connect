@@ -1,4 +1,4 @@
-import { RoomServiceClient } from 'livekit-server-sdk';
+import { RoomServiceClient, EgressClient } from 'livekit-server-sdk';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -13,6 +13,13 @@ if (!livekitHost || !livekitApiKey || !livekitApiSecret) {
 
 // Client for communicating with the LiveKit Server API
 export const roomService = new RoomServiceClient(
+  livekitHost,
+  livekitApiKey,
+  livekitApiSecret
+);
+
+// Client for communicating with LiveKit Egress Service
+export const egressClient = new EgressClient(
   livekitHost,
   livekitApiKey,
   livekitApiSecret

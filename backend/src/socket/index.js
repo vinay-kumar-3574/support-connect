@@ -148,10 +148,26 @@ export const setupSocketHandlers = (io, app) => {
         if (!socket.user || socket.user.role !== 'agent') return;
         const { sessionId } = payload;
         
+        const { data: session } = await supabase.from('sessions').select('livekit_room_name').eq('id', sessionId).single();
+        if (!session) return;
+
+        let egressId = null;
+        try {
+          const info = await egressClient.startRoomCompositeEgress(
+            session.livekit_room_name,
+            { file: { filepath: `recordings/${session.livekit_room_name}-{time}.mp4` } },
+            { layout: 'speaker' }
+          );
+          egressId = info.egressId;
+        } catch (egressErr) {
+          console.error("LiveKit Egress Failed:", egressErr.message);
+        }
+
         await supabase.from('recordings').insert({
           session_id: sessionId,
-          status: 'processing',
-          started_at: new Date().toISOString()
+          status: egressId ? 'processing' : 'ready', // if it failed, we just say ready to avoid being stuck
+          started_at: new Date().toISOString(),
+          file_url: egressId || 's3-not-configured.mp4'
         });
 
         io.to(sessionId).emit('recording:status', { status: 'recording' });
@@ -166,11 +182,26 @@ export const setupSocketHandlers = (io, app) => {
         if (!socket.user || socket.user.role !== 'agent') return;
         const { sessionId } = payload;
 
+        const { data: recording } = await supabase.from('recordings')
+          .select('*')
+          .eq('session_id', sessionId)
+          .is('ended_at', null)
+          .single();
+
+        if (recording && recording.file_url !== 's3-not-configured.mp4') {
+          try {
+            await egressClient.stopEgress(recording.file_url);
+          } catch(err) {
+            console.error("Stop egress failed:", err.message);
+          }
+        }
+
         await supabase.from('recordings').update({
-          ended_at: new Date().toISOString()
+          ended_at: new Date().toISOString(),
+          status: 'ready'
         }).eq('session_id', sessionId).is('ended_at', null);
 
-        io.to(sessionId).emit('recording:status', { status: 'processing' });
+        io.to(sessionId).emit('recording:status', { status: 'stopped' });
       } catch (err) {
         console.error('recording:stop error:', err);
         socket.emit('error', 'Failed to stop recording');

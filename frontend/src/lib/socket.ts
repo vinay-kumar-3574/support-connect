@@ -4,6 +4,7 @@ import { useStore } from './store';
 let socket: Socket | null = null;
 
 export const socketService = {
+  get socket() { return socket; },
   connect: (token?: string | null) => {
     if (socket?.connected) return socket;
 

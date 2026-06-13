@@ -48,6 +48,16 @@ function Room() {
   const [livekitToken, setLivekitToken] = useState("");
   const [livekitHost, setLivekitHost] = useState("");
   const [error, setError] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+
+  useEffect(() => {
+    socketService.socket?.on('recording:status', (payload) => {
+      setIsRecording(payload.status === 'recording');
+    });
+    return () => {
+      socketService.socket?.off('recording:status');
+    };
+  }, []);
 
   // 1. Fetch LiveKit Token & Connect Socket
   useEffect(() => {
@@ -92,9 +102,9 @@ function Room() {
   useEffect(() => {
     if (session?.status === 'ended') {
       toast.info("Session ended");
-      navigate({ to: role === 'agent' ? '/dashboard' : '/session-ended' });
+      navigate({ to: `/session/${sessionId}` });
     }
-  }, [session?.status, navigate, role]);
+  }, [session?.status, navigate, sessionId]);
 
   const handleSend = () => {
     const text = draft.trim();
@@ -134,11 +144,7 @@ function Room() {
             className="h-full w-full"
             data-lk-theme="default"
             onDisconnected={() => {
-              if (role === 'agent') {
-                navigate({ to: '/dashboard' });
-              } else {
-                navigate({ to: '/session-ended' });
-              }
+              navigate({ to: `/session/${sessionId}` });
             }}
           >
             <VideoConference />
@@ -147,7 +153,7 @@ function Room() {
 
           {/* Custom Controls Overlay for Agent */}
           {role === 'agent' && (
-            <div className="absolute top-4 left-4 z-50">
+            <div className="absolute top-4 left-4 z-50 flex gap-2">
               <Button 
                 variant="destructive" 
                 size="sm" 
@@ -159,6 +165,23 @@ function Room() {
                 }}
               >
                 End Session for All
+              </Button>
+
+              <Button
+                variant={isRecording ? "secondary" : "default"}
+                size="sm"
+                className={`shadow-lg font-medium ${isRecording ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse' : 'bg-primary'}`}
+                onClick={() => {
+                  if (isRecording) {
+                    socketService.socket?.emit('recording:stop', { sessionId });
+                    toast.info("Stopping recording...");
+                  } else {
+                    socketService.socket?.emit('recording:start', { sessionId });
+                    toast.success("Recording started");
+                  }
+                }}
+              >
+                {isRecording ? "Stop Recording" : "Record"}
               </Button>
             </div>
           )}

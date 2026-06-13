@@ -60,6 +60,23 @@ function JoinPage() {
     sessionStorage.setItem(`vidline-name-${session.id}`, name.trim());
     sessionStorage.setItem(`vidline-role-${session.id}`, "customer");
     streamRef.current?.getTracks().forEach((t) => t.stop());
+    
+    // Inject a stub session into the global store so the customer can view the details page later
+    useStore.setState((s) => ({
+      sessions: [
+        ...s.sessions.filter(x => x.id !== session.id),
+        {
+          id: session.id,
+          inviteToken: token,
+          agentId: '',
+          agentName: session.agent_name,
+          createdAt: Date.now(),
+          status: 'active',
+          participants: []
+        }
+      ]
+    }));
+
     toast.success("Joining call…");
     navigate({ to: "/room/$sessionId", params: { sessionId: session.id } });
   };

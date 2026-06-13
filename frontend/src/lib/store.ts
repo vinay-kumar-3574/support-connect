@@ -36,6 +36,8 @@ export interface Session {
   endedAt?: number;
   status: 'active' | 'ended';
   participants: Participant[];
+  recording?: boolean;
+  recordingReady?: boolean;
 }
 
 interface AuthState {

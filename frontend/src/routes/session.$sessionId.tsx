@@ -11,26 +11,19 @@ import { useStore, formatDuration } from "@/lib/store";
 export const Route = createFileRoute("/session/$sessionId")({
   ssr: false,
   head: () => ({ meta: [{ title: "Session details — Vidline" }] }),
-  component: () => (
-    <AgentGuard>
-      <SessionDetail />
-    </AgentGuard>
-  ),
+  component: SessionDetail,
 });
 
 function SessionDetail() {
   const { sessionId } = useParams({ from: "/session/$sessionId" });
   const session = useStore((s) => s.sessions.find((x) => x.id === sessionId));
   const allMessages = useStore((s) => s.messages);
-  const allEvents = useStore((s) => s.events);
   const messages = useMemo(
     () => allMessages.filter((m) => m.sessionId === sessionId),
     [allMessages, sessionId],
   );
-  const events = useMemo(
-    () => allEvents.filter((e) => e.sessionId === sessionId),
-    [allEvents, sessionId],
-  );
+  // We haven't implemented full session events log yet, so default to empty
+  const events: any[] = [];
 
   if (!session) {
     return (
@@ -55,12 +48,14 @@ function SessionDetail() {
     URL.revokeObjectURL(url);
   };
 
+  const isAgent = useStore((s) => !!s.auth.agent);
+
   return (
     <div className="min-h-screen bg-background">
-      <Navbar variant="agent" />
+      <Navbar variant={isAgent ? "agent" : "default"} />
       <main className="container mx-auto px-6 py-10 max-w-5xl">
-        <Link to="/dashboard" className="text-sm text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to dashboard
+        <Link to={isAgent ? "/dashboard" : "/"} className="text-sm text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
+          <ArrowLeft className="h-3.5 w-3.5" /> {isAgent ? "Back to dashboard" : "Back to home"}
         </Link>
 
         <div className="mt-4 flex items-start justify-between gap-4 flex-wrap">
