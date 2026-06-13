@@ -8,8 +8,9 @@ export const socketService = {
   connect: (token?: string | null) => {
     if (socket?.connected) return socket;
 
-    // Connect to the backend on the same origin (proxied by Vite in dev, or same host in prod)
-    socket = io({
+    // Connect to the backend
+    const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
+    socket = io(API_BASE, {
       auth: {
         token: token || undefined
       },
