@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Mic, MicOff, Camera, CameraOff, PhoneOff, Circle, MessageSquare, Send, X, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,11 @@ function Room() {
 
   const session = useStore((s) => s.sessions.find((x) => x.id === sessionId));
   const agent = useStore((s) => s.auth.agent);
-  const messages = useStore((s) => s.messages.filter((m) => m.sessionId === sessionId));
+  const allMessages = useStore((s) => s.messages);
+  const messages = useMemo(
+    () => allMessages.filter((m) => m.sessionId === sessionId),
+    [allMessages, sessionId],
+  );
   const sendMessage = useStore((s) => s.sendMessage);
   const endSession = useStore((s) => s.endSession);
   const leaveSession = useStore((s) => s.leaveSession);
