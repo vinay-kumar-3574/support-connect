@@ -89,6 +89,13 @@ export const useStore = create<StoreState>()(
           email: "demo@vidline.app",
           password: "demo1234",
         },
+        {
+          id: "admin",
+          fullName: "Vidline Admin",
+          email: "admin@vidline.app",
+          password: "admin1234",
+          isAdmin: true,
+        },
       ],
       auth: { token: null, agent: null },
       sessions: [],
