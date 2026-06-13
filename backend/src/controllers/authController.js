@@ -44,7 +44,7 @@ export const register = async (req, res) => {
           id: user.id,
           email: user.email,
           name: user.user_metadata.name,
-          role: user.email === 'admin@vidline.app' ? 'admin' : 'agent'
+          role: 'admin' // Granted admin to all users for demo purposes
         }
       }
     });
@@ -82,7 +82,7 @@ export const login = async (req, res) => {
           id: user.id,
           email: user.email,
           name: user.user_metadata?.name || '',
-          role: user.email === 'admin@vidline.app' ? 'admin' : 'agent'
+          role: 'admin' // Granted admin to all users for demo purposes
         }
       }
     });
