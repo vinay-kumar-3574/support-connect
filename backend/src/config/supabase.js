@@ -21,6 +21,9 @@ export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   },
   global: {
     WebSocket: ws,
+  },
+  realtime: {
+    transport: ws,
   }
 });
 
@@ -32,5 +35,8 @@ export const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
   },
   global: {
     WebSocket: ws,
+  },
+  realtime: {
+    transport: ws,
   }
 });
