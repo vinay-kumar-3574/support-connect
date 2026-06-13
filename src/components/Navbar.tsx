@@ -46,6 +46,7 @@ export function Navbar({ variant = "public" }: { variant?: "public" | "agent" })
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {agent.fullName}
             </span>
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
               Logout
@@ -53,6 +54,7 @@ export function Navbar({ variant = "public" }: { variant?: "public" | "agent" })
           </nav>
         ) : (
           <nav className="flex items-center gap-2">
+            <ThemeToggle />
             <Link to="/login">
               <Button variant="ghost" size="sm">Agent login</Button>
             </Link>
