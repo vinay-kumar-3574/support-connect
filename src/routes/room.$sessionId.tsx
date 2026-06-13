@@ -122,9 +122,9 @@ function Room() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-[oklch(0.12_0.02_240)] text-foreground overflow-hidden">
+    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
       {/* Header */}
-      <header className="h-14 px-6 flex items-center justify-between border-b border-border/60 bg-card/50 backdrop-blur">
+      <header className="h-14 px-6 flex items-center justify-between border-b border-border/60 bg-card backdrop-blur">
         <div className="flex items-center gap-3">
           <span className="font-mono text-xs text-muted-foreground">#{activeSession.id}</span>
           {activeSession.recording && (
@@ -199,7 +199,7 @@ function Room() {
       </div>
 
       {/* Control bar */}
-      <div className="h-20 border-t border-border/60 bg-card/80 backdrop-blur flex items-center justify-center gap-2">
+      <div className="h-20 border-t border-border/60 bg-card backdrop-blur flex items-center justify-center gap-2">
         <ControlButton active={micOn} onClick={() => setMicOn(!micOn)} icon={micOn ? Mic : MicOff} danger={!micOn} />
         <ControlButton active={camOn} onClick={() => setCamOn(!camOn)} icon={camOn ? Camera : CameraOff} danger={!camOn} />
         {role === "agent" && (
