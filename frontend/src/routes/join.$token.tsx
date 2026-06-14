@@ -21,7 +21,8 @@ function JoinPage() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    fetch(`/api/session/join/${token}`)
+    const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
+    fetch(`${API_BASE}/api/session/join/${token}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {

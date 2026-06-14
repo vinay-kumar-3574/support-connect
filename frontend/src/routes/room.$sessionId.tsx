@@ -101,6 +101,8 @@ function Room() {
           host = host.replace(/^livekit_host=/i, '');
           host = host.replace(/^wss\/\//i, 'wss://');
           host = host.replace(/^ws\/\//i, 'ws://');
+          host = host.replace(/^https\/\//i, 'https://');
+          host = host.replace(/^http\/\//i, 'http://');
           
           // Ensure it has a protocol
           if (!host.startsWith('ws') && !host.startsWith('http')) {
