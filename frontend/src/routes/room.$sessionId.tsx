@@ -90,7 +90,20 @@ function Room() {
 
         if (active) {
           setLivekitToken(data.token);
-          setLivekitHost(data.livekit_host || 'ws://localhost:7880');
+          let host = data.livekit_host;
+          if (!host || host === 'undefined' || host === 'null') {
+            host = 'ws://localhost:7880';
+          }
+          // Sanitize the URL: trim whitespace and remove accidental quotes
+          host = host.trim().replace(/^["']|["']$/g, '');
+          // Ensure it has a protocol
+          if (!host.startsWith('ws') && !host.startsWith('http')) {
+            host = `ws://${host}`;
+          }
+          // Convert http/https to ws/wss as LiveKit Client prefers WebSockets
+          host = host.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
+          
+          setLivekitHost(host);
           
           // Connect Socket
           socketService.connect(authState.token);
@@ -137,6 +150,8 @@ function Room() {
   if (!livekitToken || !livekitHost) {
     return <div className="h-screen flex items-center justify-center bg-background text-muted-foreground">Connecting to secure room...</div>;
   }
+
+  console.log("LiveKit connection settings:", { livekitHost, livekitToken });
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">

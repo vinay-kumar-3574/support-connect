@@ -3,7 +3,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const livekitHost = process.env.LIVEKIT_HOST;
+let livekitHost = process.env.LIVEKIT_HOST || '';
+livekitHost = livekitHost.trim().replace(/^["']|["']$/g, '');
+// Server SDK prefers http/https for API endpoints, while client prefers ws/wss
+livekitHost = livekitHost.replace(/^ws:/i, 'http:').replace(/^wss:/i, 'https:');
+
 const livekitApiKey = process.env.LIVEKIT_API_KEY;
 const livekitApiSecret = process.env.LIVEKIT_API_SECRET;
 
