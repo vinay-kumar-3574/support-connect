@@ -96,6 +96,12 @@ function Room() {
           }
           // Sanitize the URL: trim whitespace and remove accidental quotes
           host = host.trim().replace(/^["']|["']$/g, '');
+          
+          // Fix common copy-paste errors (e.g. LIVEKIT_HOST=livekit_host=wss//...)
+          host = host.replace(/^livekit_host=/i, '');
+          host = host.replace(/^wss\/\//i, 'wss://');
+          host = host.replace(/^ws\/\//i, 'ws://');
+          
           // Ensure it has a protocol
           if (!host.startsWith('ws') && !host.startsWith('http')) {
             host = `ws://${host}`;
@@ -176,7 +182,7 @@ function Room() {
             className="h-full w-full"
             data-lk-theme="default"
             onDisconnected={() => {
-              toast.error("Disconnected from the media server.");
+              navigate({ to: `/session/${sessionId}` });
             }}
           >
             <VideoConference />
