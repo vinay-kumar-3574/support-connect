@@ -176,7 +176,7 @@ function Room() {
             className="h-full w-full"
             data-lk-theme="default"
             onDisconnected={() => {
-              navigate({ to: `/session/${sessionId}` });
+              toast.error("Disconnected from the media server.");
             }}
           >
             <VideoConference />
